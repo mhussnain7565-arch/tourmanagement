@@ -1,0 +1,107 @@
+# Tour Management System - Technical Documentation
+
+## Overview
+The Tour Management System is a comprehensive platform for managing travel destinations, user registrations, and role-based access. It is built using PHP (PDO) for the backend, MySQL for data storage, and Bootstrap 5 with AdminLTE 4 for a premium, responsive user interface.
+
+## Core Components
+
+### 1. Authentication & Security ([core/auth.php](file:///c:/xampp/htdocs/tourmanagement/core/auth.php))
+The [Auth](file:///c:/xampp/htdocs/tourmanagement/core/auth.php#4-82) class handles all user-related security operations.
+
+#### `public function login($identifier, $password)`
+- **Description**: Authenticates a user using multiple identifiers.
+- **Parameters**: 
+  - `$identifier` (string): Email, CNIC, or Registration Number.
+  - `$password` (string): Plain-text password.
+- **Mechanism**: 
+  - Queries the `users` table where `is_active = 1`.
+  - Uses `password_verify` for secure hash comparison.
+- **Returns**: `true` on success, `false` on failure.
+
+#### `public function register($data)`
+- **Description**: Registers a new user into the system.
+- **Parameters**: 
+  - `$data` (array): Contains `name`, `email`, `password`, `role`, `identity_no`, and `registration_no`.
+- **Mechanism**: 
+  - Checks if the user already exists using [checkExists](file:///c:/xampp/htdocs/tourmanagement/core/auth.php#76-81).
+  - Hashes the password using `PASSWORD_DEFAULT`.
+  - Inserts record with `is_active = 0` (pending admin approval).
+- **Returns**: `true` on success, error message (string) on failure.
+
+#### `public function getPublicRoles()`
+- **Description**: Fetches roles available for public registration.
+- **Mechanism**: Excludes `super_admin` and system-protected roles for security.
+- **Returns**: Array of roles (name and key).
+
+---
+
+### 2. UI & Navigation ([includes/sidebar.php](file:///c:/xampp/htdocs/tourmanagement/includes/sidebar.php), [core/session.php](file:///c:/xampp/htdocs/tourmanagement/core/session.php))
+
+#### `function buildMenu($pdo, $parentId = 0, $userRole, $currentUrl)`
+- **Location**: [includes/sidebar.php](file:///c:/xampp/htdocs/tourmanagement/includes/sidebar.php)
+- **Description**: Recursively generates a sidebar menu based on User Role and Page hierarchy.
+- **Parameters**:
+  - `$pdo`: Database connection instance.
+  - `$parentId` (int): ID of the parent page (default 0 for root).
+  - `$userRole` (string): The role of the logged-in user.
+  - `$currentUrl` (string): Used to set the `active` class on the current menu item.
+- **Features**: Supports nested dropdowns (treeview) and access control (via `role_access` table).
+
+#### `function getRoleBadgeColor($roleName)`
+- **Location**: [core/session.php](file:///c:/xampp/htdocs/tourmanagement/core/session.php)
+- **Description**: Generates a consistent Bootstrap badge color class based on the role name.
+- **Mechanism**: Uses `crc32` hashing to map role names to a fixed set of Bootstrap colors.
+- **Returns**: String (e.g., `text-bg-primary`).
+
+---
+
+### 3. Destination Management ([dashboards/super_admin/manage_destinations.php](file:///c:/xampp/htdocs/tourmanagement/dashboards/super_admin/manage_destinations.php))
+
+#### `function prepareAdd()` (JavaScript)
+- **Description**: Resets the "Add Destination" modal fields to default values.
+- **Specifications**: Sets gravity to `1.0g`, intensity to `Low`, and initializes JSON fields (`itinerary`, `activities`).
+
+#### `function prepareEdit(d)` (JavaScript)
+- **Description**: Populates the destination modal with existing data for editing.
+- **Parameters**: 
+  - `d` (Object): The destination data object fetched from the database.
+
+---
+
+### 4. Interactive Exploration ([explore/destinations.php](file:///c:/xampp/htdocs/tourmanagement/explore/destinations.php))
+
+#### `function openDeepDive(card)` (JavaScript)
+- **Description**: Opens a high-end "Deep Dive" overlay for a specific destination.
+- **Mechanism**: 
+  - Reads data attributes from the clicked card.
+  - Parses JSON strings for `itinerary` and `activities`.
+  - Dynamically builds a vertical timeline for the itinerary.
+- **Visuals**: Uses glassmorphism and animations for a premium feel.
+
+#### `function quickPhoto(id, currentUrl)` (JavaScript)
+- **Description**: Opens a quick modal for admins to change a destination's hero image.
+- **Parameters**:
+  - `id`: Destination ID.
+  - `currentUrl`: The current image path/URL for preview.
+
+#### `function quickDelete(id, name)` (JavaScript)
+- **Description**: Triggers a "Soft Delete" (moves to trash) for a destination.
+- **Mechanism**: Prompts for confirmation then submits a POST request to the management script.
+
+---
+
+## Technical Specifications
+- **Database Architecture**: 
+  - `users`: Core user data.
+  - `destinations`: Tour details (including JSON fields for `itinerary` and `activities`).
+  - `sys_pages`: Dynamic registry of system pages.
+  - `sys_roles`: System-defined user roles.
+  - `role_access`: Junction table mapping roles to pages.
+  - `system_settings`: Key-value pairs for global configurations (Site name, logo).
+- **Security**: 
+  - Prepared statements (PDO) to prevent SQL Injection.
+  - `password_hash` / `password_verify` for credential security.
+  - Session-based authentication with "Gatekeeper" checks in [header.php](file:///c:/xampp/htdocs/tourmanagement/includes/header.php).
+- **UI Architecture**: 
+  - Dark/Light mode support (stored in `localStorage`).
+  - Recursive Breadcrumb generation based on page parent-child hierarchy.
